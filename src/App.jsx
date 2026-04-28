@@ -1,4 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+
+// 25002500 Mobile detection hook 25002500250025002500250025002500250025002500250025002500250025002500250025002500250025002500250025002500250025002500250025002500250025002500250025002500250025002500250025002500
+const useMobile = () => {
+  const [mobile, setMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const handler = () => setMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+  return mobile;
+};
 
 // ── Logo helper ──────────────────────────────────────────────────────────────
 const Logo = ({ domain, alt, size = 40, style = {} }) => {
@@ -366,42 +377,96 @@ const slides = [
 
 const totalSlides = slides.length;
 
+
 export default function CareerTimeline() {
   const [current, setCurrent] = useState(0);
   const [animating, setAnimating] = useState(false);
   const [direction, setDirection] = useState("forward");
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const mobile = useMobile();
+  const touchStartX = useRef(null);
+  const touchStartY = useRef(null);
+  const containerRef = useRef(null);
 
-  const goTo = (index, dir = "forward") => {
+  const goTo = useCallback((index, dir = "forward") => {
     if (animating || index < 0 || index >= totalSlides) return;
     setDirection(dir);
     setAnimating(true);
     setTimeout(() => { setCurrent(index); setAnimating(false); }, 300);
-  };
-  const next = () => goTo(current + 1, "forward");
-  const prev = () => goTo(current - 1, "back");
+  }, [animating]);
 
+  const next = useCallback(() => goTo(current + 1, "forward"), [current, goTo]);
+  const prev = useCallback(() => goTo(current - 1, "back"), [current, goTo]);
+
+  // Keyboard navigation
   useEffect(() => {
     const handler = (e) => {
       if (e.key === "ArrowRight" || e.key === " ") next();
       if (e.key === "ArrowLeft") prev();
+      if (e.key === "f" || e.key === "F") toggleFullscreen();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [current, animating]);
+  }, [next, prev]);
+
+  // Touch / swipe support
+  const onTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+  const onTouchEnd = (e) => {
+    if (touchStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    const dy = e.changedTouches[0].clientY - touchStartY.current;
+    // Only register horizontal swipes that are more horizontal than vertical
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+      if (dx < 0) next();
+      else prev();
+    }
+    touchStartX.current = null;
+    touchStartY.current = null;
+  };
+
+  // Fullscreen API
+  const toggleFullscreen = () => {
+    const el = document.documentElement;
+    if (!document.fullscreenElement) {
+      el.requestFullscreen?.() || el.webkitRequestFullscreen?.();
+    } else {
+      document.exitFullscreen?.() || document.webkitExitFullscreen?.();
+    }
+  };
+  useEffect(() => {
+    const handler = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", handler);
+    document.addEventListener("webkitfullscreenchange", handler);
+    return () => {
+      document.removeEventListener("fullscreenchange", handler);
+      document.removeEventListener("webkitfullscreenchange", handler);
+    };
+  }, []);
 
   const slide = slides[current];
+  const pad = mobile ? "16px 18px" : "30px 60px";
+  const topPad = mobile ? "12px 18px" : "18px 40px";
 
   return (
-    <div style={{
-      fontFamily: "'Georgia', serif",
-      background: slide.color,
-      minHeight: "100vh",
-      display: "flex",
-      flexDirection: "column",
-      transition: "background 0.6s ease",
-      position: "relative",
-      overflow: "hidden",
-    }}>
+    <div
+      ref={containerRef}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+      style={{
+        fontFamily: "'Georgia', serif",
+        background: slide.color,
+        height: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        transition: "background 0.6s ease",
+        position: "relative",
+        overflow: "hidden",
+        userSelect: "none",
+      }}
+    >
       {/* Background glow */}
       <div style={{
         position: "absolute", inset: 0, pointerEvents: "none",
@@ -413,72 +478,107 @@ export default function CareerTimeline() {
       {/* Top bar */}
       <div style={{
         display: "flex", justifyContent: "space-between", alignItems: "center",
-        padding: "18px 40px", borderBottom: `1px solid ${slide.accent}33`,
-        position: "relative", zIndex: 2,
+        padding: topPad, borderBottom: `1px solid ${slide.accent}33`,
+        position: "relative", zIndex: 2, flexShrink: 0,
       }}>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          {slides.map((_, i) => (
-            <div key={i} onClick={() => goTo(i, i > current ? "forward" : "back")}
-              style={{
-                width: i === current ? 28 : 8, height: 8, borderRadius: 4,
-                background: i === current ? slide.accent : `${slide.accent}44`,
-                transition: "all 0.4s ease", cursor: "pointer",
-              }} />
-          ))}
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+        {/* Dot progress — hide on very small screens */}
+        {!mobile && (
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {slides.map((_, i) => (
+              <div key={i} onClick={() => goTo(i, i > current ? "forward" : "back")}
+                style={{
+                  width: i === current ? 28 : 8, height: 8, borderRadius: 4,
+                  background: i === current ? slide.accent : `${slide.accent}44`,
+                  transition: "all 0.4s ease", cursor: "pointer",
+                }} />
+            ))}
+          </div>
+        )}
+        {mobile && (
+          <span style={{ color: `${slide.accent}cc`, fontSize: 11, fontFamily: "monospace", fontWeight: "bold" }}>
+            {current + 1} / {totalSlides}
+          </span>
+        )}
+
+        {/* Logo + counter + fullscreen button */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginLeft: "auto" }}>
           {slide.logo && (
-            <Logo domain={slide.logo} alt={slide.logoAlt || ""} size={38}
+            <Logo domain={slide.logo} alt={slide.logoAlt || ""} size={mobile ? 28 : 38}
               style={{ borderRadius: 8, padding: 4, boxShadow: `0 0 0 1px ${slide.accent}33` }} />
           )}
-          <span style={{
-            color: `${slide.accent}cc`, fontSize: 13, letterSpacing: 2,
-            fontFamily: "monospace", fontWeight: "bold",
-          }}>{current + 1} / {totalSlides}</span>
+          {!mobile && (
+            <span style={{
+              color: `${slide.accent}cc`, fontSize: 13, letterSpacing: 2,
+              fontFamily: "monospace", fontWeight: "bold",
+            }}>{current + 1} / {totalSlides}</span>
+          )}
+          {/* Fullscreen toggle */}
+          <button
+            onClick={toggleFullscreen}
+            title={isFullscreen ? "Exit fullscreen (F)" : "Go fullscreen (F)"}
+            style={{
+              width: 34, height: 34, borderRadius: 8,
+              border: `1px solid ${slide.accent}55`,
+              background: `${slide.accent}18`,
+              color: "white", fontSize: 14, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >
+            {isFullscreen ? "⛶" : "⛶"}
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ display: "block" }}>
+              {isFullscreen
+                ? <path d="M5 1H1v4M9 1h4v4M5 13H1V9M9 13h4V9" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+                : <path d="M1 5V1h4M9 1h4v4M13 9v4H9M5 13H1V9" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+              }
+            </svg>
+          </button>
         </div>
       </div>
 
       {/* Main content */}
       <div style={{
         flex: 1, display: "flex", flexDirection: "column", justifyContent: "center",
-        padding: "30px 60px", position: "relative", zIndex: 2,
+        padding: pad, position: "relative", zIndex: 2,
         opacity: animating ? 0 : 1,
         transform: animating ? (direction === "forward" ? "translateX(30px)" : "translateX(-30px)") : "translateX(0)",
         transition: "opacity 0.3s ease, transform 0.3s ease",
+        overflowY: "auto",
       }}>
 
         {/* Badge */}
         <div style={{
-          display: "inline-flex", alignItems: "center", gap: 10,
+          display: "inline-flex", alignItems: "center", gap: 8,
           background: `${slide.accent}22`, border: `1px solid ${slide.accent}55`,
-          borderRadius: 30, padding: "8px 20px", marginBottom: 26, width: "fit-content",
+          borderRadius: 30, padding: mobile ? "5px 12px" : "8px 20px",
+          marginBottom: mobile ? 14 : 26, width: "fit-content",
         }}>
-          <span style={{ fontSize: 17 }}>{slide.icon}</span>
+          <span style={{ fontSize: mobile ? 14 : 17 }}>{slide.icon}</span>
           <span style={{
-            color: slide.accent, fontSize: 12, letterSpacing: 3,
+            color: slide.accent, fontSize: mobile ? 9 : 12, letterSpacing: 2,
             fontFamily: "monospace", fontWeight: "bold", textTransform: "uppercase",
           }}>{slide.year}</span>
-          {slide.tag && <>
+          {slide.tag && !mobile && <>
             <span style={{ color: `${slide.accent}55`, fontSize: 11 }}>•</span>
             <span style={{ color: `${slide.accent}aa`, fontSize: 11, fontFamily: "monospace", textTransform: "uppercase", letterSpacing: 1 }}>{slide.tag}</span>
           </>}
         </div>
 
         {/* Title + large logo */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 24, marginBottom: 22 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: mobile ? 12 : 22 }}>
           <h1 style={{
-            color: "white", fontSize: "clamp(26px, 4vw, 54px)",
+            color: "white",
+            fontSize: mobile ? "clamp(22px, 6vw, 36px)" : "clamp(26px, 4vw, 54px)",
             fontWeight: 700, lineHeight: 1.15, margin: 0,
             whiteSpace: "pre-line", flex: 1,
           }}>{slide.title}</h1>
-          {slide.logo && slide.type === "milestone" && (
+          {slide.logo && slide.type === "milestone" && !mobile && (
             <div style={{
-              background: "white", borderRadius: 16, padding: 12,
+              background: "white", borderRadius: 16, padding: 10,
               display: "flex", alignItems: "center", justifyContent: "center",
               flexShrink: 0, boxShadow: `0 4px 24px ${slide.accent}30`,
-              width: 90, height: 90,
+              width: 80, height: 80,
             }}>
-              <Logo domain={slide.logo} alt={slide.logoAlt || ""} size={70}
+              <Logo domain={slide.logo} alt={slide.logoAlt || ""} size={62}
                 style={{ background: "transparent", padding: 0, borderRadius: 0 }} />
             </div>
           )}
@@ -487,22 +587,24 @@ export default function CareerTimeline() {
         {/* Body */}
         {slide.body && (
           <p style={{
-            color: "rgba(255,255,255,0.75)", fontSize: "clamp(14px, 1.6vw, 19px)",
-            lineHeight: 1.7, maxWidth: 680, margin: "0 0 22px 0",
+            color: "rgba(255,255,255,0.75)",
+            fontSize: mobile ? "clamp(12px, 3.5vw, 15px)" : "clamp(14px, 1.6vw, 19px)",
+            lineHeight: 1.7, maxWidth: 680, margin: `0 0 ${mobile ? 14 : 22}px 0`,
           }}>{slide.body}</p>
         )}
 
         {/* Pillars */}
         {slide.pillars && (
-          <div style={{ display: "flex", gap: 14, marginBottom: 22, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 10, marginBottom: mobile ? 14 : 22, flexWrap: "wrap" }}>
             {slide.pillars.map((p, i) => (
               <div key={i} style={{
                 background: `${slide.accent}15`, border: `1px solid ${slide.accent}40`,
-                borderRadius: 14, padding: "15px 18px", flex: "1 1 150px", minWidth: 130,
+                borderRadius: 12, padding: mobile ? "10px 12px" : "15px 18px",
+                flex: "1 1 120px", minWidth: 100,
               }}>
-                <div style={{ fontSize: 24, marginBottom: 7 }}>{p.icon}</div>
-                <div style={{ color: slide.accent, fontWeight: "bold", fontSize: 14, marginBottom: 4, fontFamily: "monospace", letterSpacing: 1 }}>{p.label}</div>
-                <div style={{ color: "rgba(255,255,255,0.58)", fontSize: 12, lineHeight: 1.5 }}>{p.desc}</div>
+                <div style={{ fontSize: mobile ? 18 : 24, marginBottom: 5 }}>{p.icon}</div>
+                <div style={{ color: slide.accent, fontWeight: "bold", fontSize: mobile ? 11 : 14, marginBottom: 3, fontFamily: "monospace", letterSpacing: 1 }}>{p.label}</div>
+                <div style={{ color: "rgba(255,255,255,0.58)", fontSize: mobile ? 10 : 12, lineHeight: 1.5 }}>{p.desc}</div>
               </div>
             ))}
           </div>
@@ -510,33 +612,35 @@ export default function CareerTimeline() {
 
         {/* Client industries */}
         {slide.industries && (
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 18 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: mobile ? 12 : 18 }}>
             {slide.industries.map((ind, i) => (
               <div key={i} style={{
-                flex: "1 1 185px", background: `${slide.accent}0e`,
-                border: `1px solid ${slide.accent}35`, borderRadius: 14, padding: "13px 15px",
+                flex: mobile ? "1 1 140px" : "1 1 185px",
+                background: `${slide.accent}0e`,
+                border: `1px solid ${slide.accent}35`, borderRadius: 12, padding: mobile ? "10px 11px" : "13px 15px",
               }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 11,
-                  paddingBottom: 8, borderBottom: `1px solid ${slide.accent}25` }}>
-                  <span style={{ fontSize: 14 }}>{ind.icon}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8,
+                  paddingBottom: 6, borderBottom: `1px solid ${slide.accent}25` }}>
+                  <span style={{ fontSize: 12 }}>{ind.icon}</span>
                   <span style={{
-                    color: slide.accent, fontSize: 9, fontFamily: "monospace",
-                    fontWeight: "bold", letterSpacing: 1.5, textTransform: "uppercase",
+                    color: slide.accent, fontSize: 8, fontFamily: "monospace",
+                    fontWeight: "bold", letterSpacing: 1.2, textTransform: "uppercase",
                   }}>{ind.label}</span>
                 </div>
                 {ind.clients.map((c, j) => (
-                  <div key={j} style={{ marginBottom: 9, display: "flex", alignItems: "center", gap: 9 }}>
+                  <div key={j} style={{ marginBottom: 7, display: "flex", alignItems: "center", gap: 7 }}>
                     <div style={{
-                      width: 34, height: 34, borderRadius: 8, background: "white",
+                      width: mobile ? 26 : 34, height: mobile ? 26 : 34,
+                      borderRadius: 6, background: "white",
                       display: "flex", alignItems: "center", justifyContent: "center",
                       flexShrink: 0, boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
                     }}>
-                      <Logo domain={c.logo} alt={c.name} size={28}
+                      <Logo domain={c.logo} alt={c.name} size={mobile ? 20 : 28}
                         style={{ background: "transparent", padding: 0, borderRadius: 0 }} />
                     </div>
                     <div>
-                      <div style={{ color: "white", fontSize: 12, fontWeight: "bold", marginBottom: 1 }}>{c.name}</div>
-                      <div style={{ color: "rgba(255,255,255,0.42)", fontSize: 10, lineHeight: 1.35 }}>{c.note}</div>
+                      <div style={{ color: "white", fontSize: mobile ? 10 : 12, fontWeight: "bold", marginBottom: 1 }}>{c.name}</div>
+                      {!mobile && <div style={{ color: "rgba(255,255,255,0.42)", fontSize: 10, lineHeight: 1.35 }}>{c.note}</div>}
                     </div>
                   </div>
                 ))}
@@ -547,13 +651,15 @@ export default function CareerTimeline() {
 
         {/* Bullets */}
         {slide.bullets && (
-          <ul style={{ padding: 0, margin: "0 0 22px 0", listStyle: "none", maxWidth: 680 }}>
+          <ul style={{ padding: 0, margin: `0 0 ${mobile ? 14 : 22}px 0`, listStyle: "none", maxWidth: 680 }}>
             {slide.bullets.map((b, i) => (
               <li key={i} style={{
-                display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 11,
-                color: "rgba(255,255,255,0.82)", fontSize: "clamp(13px, 1.5vw, 17px)", lineHeight: 1.55,
+                display: "flex", gap: 10, alignItems: "flex-start", marginBottom: mobile ? 8 : 11,
+                color: "rgba(255,255,255,0.82)",
+                fontSize: mobile ? "clamp(11px, 3vw, 14px)" : "clamp(13px, 1.5vw, 17px)",
+                lineHeight: 1.5,
               }}>
-                <span style={{ color: slide.accent, fontSize: 16, marginTop: 2, flexShrink: 0 }}>→</span>
+                <span style={{ color: slide.accent, fontSize: mobile ? 13 : 16, marginTop: 2, flexShrink: 0 }}>→</span>
                 {b}
               </li>
             ))}
@@ -562,33 +668,35 @@ export default function CareerTimeline() {
 
         {/* Hierarchy ladder */}
         {slide.levels && (
-          <div style={{ display: "flex", gap: 0, alignItems: "stretch", flexWrap: "wrap", marginBottom: 18 }}>
+          <div style={{ display: "flex", gap: 0, alignItems: "stretch", flexWrap: mobile ? "wrap" : "nowrap", marginBottom: mobile ? 12 : 18 }}>
             {slide.levels.map((lv, i) => (
               <div key={i} style={{
-                flex: "1 1 110px", minWidth: 95,
+                flex: mobile ? "1 1 44%" : "1 1 110px",
+                minWidth: mobile ? "44%" : 95,
                 background: lv.me ? `${slide.accent}28` : `${slide.accent}0d`,
                 border: lv.me ? `2px solid ${slide.accent}` : `1px solid ${slide.accent}30`,
-                borderRadius: 12, margin: "0 4px", padding: "13px 10px", position: "relative",
+                borderRadius: 10, margin: mobile ? "6px 3px" : "0 4px",
+                padding: mobile ? "10px 8px" : "13px 10px", position: "relative",
               }}>
                 {lv.me && (
                   <div style={{
-                    position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)",
-                    background: slide.accent, color: "#050a1a", fontSize: 9,
+                    position: "absolute", top: -10, left: "50%", transform: "translateX(-50%)",
+                    background: slide.accent, color: "#050a1a", fontSize: 8,
                     fontFamily: "monospace", fontWeight: "bold", letterSpacing: 1,
-                    padding: "3px 8px", borderRadius: 10, whiteSpace: "nowrap",
+                    padding: "2px 7px", borderRadius: 8, whiteSpace: "nowrap",
                   }}>← ME</div>
                 )}
                 <div style={{
-                  width: 24, height: 24, borderRadius: "50%",
+                  width: mobile ? 20 : 24, height: mobile ? 20 : 24, borderRadius: "50%",
                   background: lv.me ? slide.accent : `${slide.accent}30`,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 10, fontWeight: "bold",
+                  fontSize: 9, fontWeight: "bold",
                   color: lv.me ? "#050a1a" : slide.accent,
-                  marginBottom: 7, fontFamily: "monospace",
+                  marginBottom: 5, fontFamily: "monospace",
                 }}>{i + 1}</div>
-                <div style={{ color: lv.me ? slide.accent : "white", fontSize: 11, fontWeight: "bold", marginBottom: 3, lineHeight: 1.3 }}>{lv.title}</div>
-                <div style={{ color: `${slide.accent}cc`, fontSize: 9, fontFamily: "monospace", marginBottom: 4, letterSpacing: 0.5 }}>{lv.years}</div>
-                <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 10, lineHeight: 1.4 }}>{lv.desc}</div>
+                <div style={{ color: lv.me ? slide.accent : "white", fontSize: mobile ? 10 : 11, fontWeight: "bold", marginBottom: 2, lineHeight: 1.3 }}>{lv.title}</div>
+                <div style={{ color: `${slide.accent}cc`, fontSize: 8, fontFamily: "monospace", marginBottom: 3, letterSpacing: 0.5 }}>{lv.years}</div>
+                {!mobile && <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 10, lineHeight: 1.4 }}>{lv.desc}</div>}
               </div>
             ))}
           </div>
@@ -597,68 +705,118 @@ export default function CareerTimeline() {
         {/* Stat */}
         {slide.stat && (
           <div style={{
-            display: "inline-flex", alignItems: "center", gap: 12,
+            display: "inline-flex", alignItems: "center", gap: 10,
             background: `${slide.accent}18`, border: `1px solid ${slide.accent}44`,
-            borderRadius: 12, padding: "11px 20px", width: "fit-content",
+            borderRadius: 10, padding: mobile ? "8px 14px" : "11px 20px", width: "fit-content",
           }}>
-            <div style={{ width: 3, height: 26, background: slide.accent, borderRadius: 2 }} />
-            <span style={{ color: slide.accent, fontFamily: "monospace", fontSize: 13, fontWeight: "bold", letterSpacing: 1 }}>
+            <div style={{ width: 3, height: mobile ? 20 : 26, background: slide.accent, borderRadius: 2 }} />
+            <span style={{ color: slide.accent, fontFamily: "monospace", fontSize: mobile ? 11 : 13, fontWeight: "bold", letterSpacing: 1 }}>
               {slide.stat}
             </span>
           </div>
         )}
       </div>
 
-      {/* Timeline strip */}
-      <div style={{
-        padding: "13px 40px", borderTop: `1px solid ${slide.accent}22`,
-        display: "flex", alignItems: "center", overflowX: "auto",
-        position: "relative", zIndex: 2,
-      }}>
-        {slides.map((s, i) => (
-          <div key={i} onClick={() => goTo(i, i > current ? "forward" : "back")}
-            style={{ display: "flex", alignItems: "center", cursor: "pointer", opacity: i === current ? 1 : 0.38, transition: "opacity 0.3s", flexShrink: 0 }}>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "0 9px" }}>
-              <div style={{
-                width: 8, height: 8, borderRadius: "50%",
-                background: i === current ? slide.accent : "rgba(255,255,255,0.32)",
-                transition: "background 0.3s",
-              }} />
-              <span style={{
-                color: i === current ? slide.accent : "rgba(255,255,255,0.4)",
-                fontSize: 8, marginTop: 3, fontFamily: "monospace", letterSpacing: 0.5,
-                textAlign: "center", maxWidth: 52, lineHeight: 1.2,
-              }}>{s.year}</span>
+      {/* Timeline strip — hide on mobile */}
+      {!mobile && (
+        <div style={{
+          padding: "11px 40px", borderTop: `1px solid ${slide.accent}22`,
+          display: "flex", alignItems: "center", overflowX: "auto",
+          position: "relative", zIndex: 2, flexShrink: 0,
+        }}>
+          {slides.map((s, i) => (
+            <div key={i} onClick={() => goTo(i, i > current ? "forward" : "back")}
+              style={{ display: "flex", alignItems: "center", cursor: "pointer", opacity: i === current ? 1 : 0.38, transition: "opacity 0.3s", flexShrink: 0 }}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "0 9px" }}>
+                <div style={{
+                  width: 8, height: 8, borderRadius: "50%",
+                  background: i === current ? slide.accent : "rgba(255,255,255,0.32)",
+                  transition: "background 0.3s",
+                }} />
+                <span style={{
+                  color: i === current ? slide.accent : "rgba(255,255,255,0.4)",
+                  fontSize: 8, marginTop: 3, fontFamily: "monospace", letterSpacing: 0.5,
+                  textAlign: "center", maxWidth: 52, lineHeight: 1.2,
+                }}>{s.year}</span>
+              </div>
+              {i < totalSlides - 1 && <div style={{ width: 22, height: 1, background: "rgba(255,255,255,0.15)" }} />}
             </div>
-            {i < totalSlides - 1 && <div style={{ width: 22, height: 1, background: "rgba(255,255,255,0.15)" }} />}
+          ))}
+        </div>
+      )}
+
+      {/* Mobile bottom nav bar */}
+      {mobile && (
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "10px 20px", borderTop: `1px solid ${slide.accent}22`,
+          position: "relative", zIndex: 2, flexShrink: 0,
+          background: `${slide.color}ee`,
+        }}>
+          <button onClick={prev} disabled={current === 0} style={{
+            width: 44, height: 44, borderRadius: "50%",
+            border: `1px solid ${slide.accent}55`, background: `${slide.accent}18`,
+            color: current === 0 ? "rgba(255,255,255,0.2)" : "white",
+            fontSize: 20, cursor: current === 0 ? "not-allowed" : "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>←</button>
+
+          {/* Mobile dot indicators */}
+          <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+            {slides.map((_, i) => (
+              <div key={i} onClick={() => goTo(i, i > current ? "forward" : "back")}
+                style={{
+                  width: i === current ? 18 : 6, height: 6, borderRadius: 3,
+                  background: i === current ? slide.accent : `${slide.accent}44`,
+                  transition: "all 0.3s", cursor: "pointer",
+                }} />
+            ))}
           </div>
-        ))}
-      </div>
 
-      {/* Nav buttons */}
-      <div style={{ position: "fixed", bottom: 74, right: 34, display: "flex", gap: 11, zIndex: 10 }}>
-        <button onClick={prev} disabled={current === 0} style={{
-          width: 44, height: 44, borderRadius: "50%",
-          border: `1px solid ${slide.accent}55`, background: `${slide.accent}18`,
-          color: current === 0 ? "rgba(255,255,255,0.2)" : "white",
-          fontSize: 18, cursor: current === 0 ? "not-allowed" : "pointer",
-          display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s",
-        }}>←</button>
-        <button onClick={next} disabled={current === totalSlides - 1} style={{
-          width: 44, height: 44, borderRadius: "50%",
-          border: `1px solid ${slide.accent}`, background: slide.accent, color: "white",
-          fontSize: 18, cursor: current === totalSlides - 1 ? "not-allowed" : "pointer",
-          display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s",
-          opacity: current === totalSlides - 1 ? 0.4 : 1,
-        }}>→</button>
-      </div>
+          <button onClick={next} disabled={current === totalSlides - 1} style={{
+            width: 44, height: 44, borderRadius: "50%",
+            border: `1px solid ${slide.accent}`, background: slide.accent, color: "white",
+            fontSize: 20, cursor: current === totalSlides - 1 ? "not-allowed" : "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            opacity: current === totalSlides - 1 ? 0.4 : 1,
+          }}>→</button>
+        </div>
+      )}
 
-      {current === 0 && (
+      {/* Desktop nav buttons */}
+      {!mobile && (
+        <div style={{ position: "fixed", bottom: 68, right: 34, display: "flex", gap: 11, zIndex: 10 }}>
+          <button onClick={prev} disabled={current === 0} style={{
+            width: 44, height: 44, borderRadius: "50%",
+            border: `1px solid ${slide.accent}55`, background: `${slide.accent}18`,
+            color: current === 0 ? "rgba(255,255,255,0.2)" : "white",
+            fontSize: 18, cursor: current === 0 ? "not-allowed" : "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s",
+          }}>←</button>
+          <button onClick={next} disabled={current === totalSlides - 1} style={{
+            width: 44, height: 44, borderRadius: "50%",
+            border: `1px solid ${slide.accent}`, background: slide.accent, color: "white",
+            fontSize: 18, cursor: current === totalSlides - 1 ? "not-allowed" : "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s",
+            opacity: current === totalSlides - 1 ? 0.4 : 1,
+          }}>→</button>
+        </div>
+      )}
+
+      {current === 0 && !mobile && (
         <div style={{
           position: "fixed", bottom: 16, left: "50%", transform: "translateX(-50%)",
           color: "rgba(255,255,255,0.3)", fontSize: 11, fontFamily: "monospace",
           letterSpacing: 1, zIndex: 10,
-        }}>Press → or Space to advance</div>
+        }}>Press → or Space to advance • F for fullscreen</div>
+      )}
+      {current === 0 && mobile && (
+        <div style={{
+          position: "absolute", top: "50%", left: "50%",
+          transform: "translate(-50%, 120px)",
+          color: "rgba(255,255,255,0.25)", fontSize: 10, fontFamily: "monospace",
+          letterSpacing: 1, zIndex: 10, whiteSpace: "nowrap",
+        }}>Swipe to navigate</div>
       )}
     </div>
   );
