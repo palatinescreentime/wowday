@@ -55,6 +55,64 @@ const Logo = ({ domain, alt, size = 40, style = {} }) => {
 };
 
 
+// ── Michigan SVG ─────────────────────────────────────────────────────────────
+const MichiganGraphic = ({ accent }) => (
+  <div style={{ flexShrink: 0, width: 200, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+    <svg viewBox="0 0 220 260" xmlns="http://www.w3.org/2000/svg" style={{ width: 200, height: "auto", filter: "drop-shadow(0 6px 24px rgba(0,0,0,0.5))" }}>
+      {/* Lower Peninsula */}
+      <path
+        d="M 108,12 L 122,14 L 138,20 L 150,28 L 158,40 L 160,54
+           L 168,62 L 174,76 L 178,92 L 180,110 L 178,128
+           L 182,144 L 186,160 L 188,175 L 184,190
+           L 176,204 L 164,216 L 150,224 L 134,230
+           L 116,234 L 98,232 L 82,226 L 68,216
+           L 58,204 L 52,190 L 48,174 L 46,158
+           L 48,142 L 50,126 L 52,110 L 56,94
+           L 60,78 L 62,62 L 60,48 L 66,36
+           L 78,24 L 92,16 Z"
+        fill={accent + "28"}
+        stroke={accent}
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+      />
+      {/* Upper Peninsula */}
+      <path
+        d="M 48,118 L 38,112 L 24,106 L 12,102 L 8,94
+           L 12,86 L 24,82 L 38,86 L 48,94 L 52,106 Z"
+        fill={accent + "18"}
+        stroke={accent}
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+        opacity="0.75"
+      />
+      {/* Lake Michigan suggestion */}
+      <path
+        d="M 48,100 Q 36,130 38,160 Q 40,185 52,200"
+        fill="none"
+        stroke={accent}
+        strokeWidth="0.8"
+        strokeDasharray="3,3"
+        opacity="0.3"
+      />
+      {/* SW shore star — Stevensville area */}
+      <g transform="translate(56, 198)">
+        <circle cx="0" cy="0" r="12" fill={accent} opacity="0.18" />
+        <circle cx="0" cy="0" r="6" fill={accent} opacity="0.35" />
+        <polygon
+          points="0,-9 2.1,-2.9 8.6,-2.9 3.5,1.1 5.3,7.6 0,3.8 -5.3,7.6 -3.5,1.1 -8.6,-2.9 -2.1,-2.9"
+          fill={accent}
+          stroke="white"
+          strokeWidth="0.7"
+        />
+      </g>
+    </svg>
+    <div style={{
+      color: accent, fontFamily: "monospace", fontSize: 11,
+      letterSpacing: 2, textTransform: "uppercase", opacity: 0.8,
+    }}>Michigan</div>
+  </div>
+);
+
 // ── Travel map ────────────────────────────────────────────────────────────────
 const TRAVEL_CITIES = [
   { name: "London",        lat: 51.5074,  lng:  -0.1278,  type: "intl" },
@@ -216,10 +274,10 @@ const slides = [
     icon: "🎒",
     color: "#1a1a2e",
     accent: "#e94560",
-    title: "Welcome to\nWOW Day",
-    body: "Today I'll share an overview of the company I work for, what I actually do there every day, and how I got there — starting from right here in Michigan.",
+    title: "Thank you",
+    body: "Today I'll share an overview of the company I work for, what I actually do there every day, and how I got there.",
     stat: null,
-    tag: "Stevensville, MI",
+    tag: null,
     logo: null,
   },
   {
@@ -748,6 +806,9 @@ export default function CareerTimeline() {
               <Logo domain={slide.logo} alt={slide.logoAlt || ""} size={62}
                 style={{ background: "transparent", padding: 0, borderRadius: 0 }} />
             </div>
+          )}
+          {slide.type === "intro" && !mobile && (
+            <MichiganGraphic accent={slide.accent} />
           )}
 
         </div>
