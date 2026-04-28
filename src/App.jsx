@@ -5,6 +5,11 @@ const Logo = ({ domain, alt, size = 40, style = {} }) => {
   const [src, setSrc] = useState(`https://logo.clearbit.com/${domain}`);
   const [err, setErr] = useState(false);
 
+  useEffect(() => {
+    setSrc(`https://logo.clearbit.com/${domain}`);
+    setErr(false);
+  }, [domain]);
+
   const handleError = () => {
     if (src.includes("clearbit")) {
       setSrc(`https://www.google.com/s2/favicons?domain=${domain}&sz=128`);
@@ -334,10 +339,11 @@ const slides = [
     title: "What I'd Tell\n7th-Grade Me",
     body: null,
     bullets: [
-      "Your first job won't be your last — every role teaches you something.",
-      "Leadership is a skill you build, not a title you're given.",
-      "Data and technology will change every career — learn to love it.",
-      "The best investment you'll ever make is in yourself.",
+      "I learned that intelligence isn't fixed — it grows with effort and experience.",
+      "Have strong opinions, hold them loosely — stay curious and open to being wrong.",
+      "Things in life are relative, and through experiences comes wisdom.",
+      "The democratization of technology has created a world with more opportunity than ever before.",
+      "I've never regretted being nice.",
     ],
     stat: null,
     tag: null,
@@ -352,7 +358,7 @@ const slides = [
     accent: "#f5a623",
     logo: null,
     title: "What Questions\nDo You Have?",
-    body: "There are no wrong questions. Curiosity is literally the most important skill in any career.",
+    body: null,
     stat: null,
     tag: "Let's Talk",
   },
