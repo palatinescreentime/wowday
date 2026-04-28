@@ -2,21 +2,37 @@ import { useState, useEffect } from "react";
 
 // ── Logo helper ──────────────────────────────────────────────────────────────
 const Logo = ({ domain, alt, size = 40, style = {} }) => {
+  const [src, setSrc] = useState(`https://logo.clearbit.com/${domain}`);
   const [err, setErr] = useState(false);
-  if (err) return null;
+
+  const handleError = () => {
+    if (src.includes("clearbit")) {
+      setSrc(`https://www.google.com/s2/favicons?domain=${domain}&sz=128`);
+    } else {
+      setErr(true);
+    }
+  };
+
+  if (err) {
+    const letter = (alt || domain || "?")[0].toUpperCase();
+    return (
+      <div style={{
+        width: size, height: size, borderRadius: 8,
+        background: "#1f70c1", display: "flex", alignItems: "center",
+        justifyContent: "center", fontSize: size * 0.45, fontWeight: "bold",
+        color: "white", flexShrink: 0, ...style,
+      }}>{letter}</div>
+    );
+  }
+
   return (
     <img
-      src={`https://logo.clearbit.com/${domain}`}
+      src={src}
       alt={alt}
-      onError={() => setErr(true)}
+      onError={handleError}
       style={{
-        width: size,
-        height: size,
-        objectFit: "contain",
-        borderRadius: 8,
-        background: "white",
-        padding: 4,
-        ...style,
+        width: size, height: size, objectFit: "contain",
+        borderRadius: 8, background: "white", padding: 4, ...style,
       }}
     />
   );
@@ -59,10 +75,32 @@ const slides = [
     tag: "Founded 1911",
   },
   {
+    id: "ibm-infra",
+    type: "ibm",
+    year: "IBM Infrastructure",
+    label: "Division 1",
+    icon: "🖥️",
+    color: "#050a1a",
+    accent: "#1f70c1",
+    logo: "ibm.com",
+    logoAlt: "IBM",
+    title: "IBM Infrastructure:\nThe Muscle Behind the Curtain",
+    body: "When a bank processes millions of transactions per second, or a hospital stores millions of patient records securely — IBM Infrastructure is often what makes that possible.",
+    bullets: [
+      "IBM Z (mainframes) — the most reliable computers ever built, used by 45 of the world's top 50 banks",
+      "IBM Power Systems — high-performance servers for data-heavy industries",
+      "IBM Storage — keeping critical data safe, fast, and always available",
+      "Hybrid Cloud infrastructure connecting on-premise systems to the cloud",
+      "🔬 IBM Research — one of the world's largest corporate research organizations, with 3,000+ researchers across 6 continents. Their discoveries feed directly into Infrastructure products and many Software innovations — from quantum computing to AI chips",
+    ],
+    stat: "~$15B annual revenue",
+    tag: "Servers • Mainframes • Hybrid Cloud",
+  },
+  {
     id: "ibm-software",
     type: "ibm",
     year: "IBM Software",
-    label: "Division 1",
+    label: "Division 2",
     icon: "💾",
     color: "#050a1a",
     accent: "#1f70c1",
@@ -76,29 +114,8 @@ const slides = [
       "Automation tools that replace repetitive, manual business processes",
       "Data & security software protecting thousands of companies worldwide",
     ],
-    stat: null,
+    stat: "~$25B annual revenue",
     tag: "AI • Cloud • Automation",
-  },
-  {
-    id: "ibm-infra",
-    type: "ibm",
-    year: "IBM Infrastructure",
-    label: "Division 2",
-    icon: "🖥️",
-    color: "#050a1a",
-    accent: "#1f70c1",
-    logo: "ibm.com",
-    logoAlt: "IBM",
-    title: "IBM Infrastructure:\nThe Muscle Behind the Curtain",
-    body: "When a bank processes millions of transactions per second, or a hospital stores millions of patient records securely — IBM Infrastructure is often what makes that possible.",
-    bullets: [
-      "IBM Z (mainframes) — the most reliable computers ever built, used by 45 of the world's top 50 banks",
-      "IBM Power Systems — high-performance servers for data-heavy industries",
-      "IBM Storage — keeping critical data safe, fast, and always available",
-      "Hybrid Cloud infrastructure connecting on-premise systems to the cloud",
-    ],
-    stat: null,
-    tag: "Servers • Mainframes • Hybrid Cloud",
   },
   {
     id: "ibm-consulting-what",
@@ -134,12 +151,12 @@ const slides = [
     title: "A Day in My Life\nas a Partner",
     body: "No two days are the same — that's what makes it exciting. Here's what I actually do:",
     bullets: [
-      "Meet with CEOs and executives to understand their biggest business challenges",
+      "Meet with clients to understand their biggest business challenges",
       "Lead a team of 20+ consultants across multiple client projects simultaneously",
       "Use AI and data analytics to find solutions worth millions in savings or revenue",
-      "Sell and negotiate new engagements — I help grow IBM's business too",
+      "Solution, sell, and deliver services engagements to win for our clients and IBM",
     ],
-    stat: "Clients: Eli Lilly • Kraft Heinz • Estée Lauder",
+    stat: "✈️  I work at my clients' offices — which means I travel frequently",
     tag: "Healthcare • Life Sciences • Consumer Goods",
   },
   {
@@ -167,7 +184,9 @@ const slides = [
         label: "Beauty & Luxury",
         icon: "✨",
         clients: [
-          { name: "Estée Lauder", note: "Scaling innovation across global markets",              logo: "elcompanies.com" },
+          { name: "Estée Lauder", note: "Scaling innovation across global markets",  logo: "elcompanies.com" },
+          { name: "L'Oréal",      note: "Data & digital transformation",              logo: "loreal.com" },
+          { name: "Chanel",       note: "Luxury brand analytics & strategy",          logo: "chanel.com" },
         ],
       },
       {
