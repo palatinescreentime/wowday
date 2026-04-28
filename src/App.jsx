@@ -148,16 +148,15 @@ const MapSlide = ({ accent }) => {
       legend.onAdd = () => {
         const div = L.DomUtil.create("div");
         div.style.cssText = "background:rgba(5,10,26,0.85);padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);font-family:monospace;font-size:11px;color:white;";
-        div.innerHTML = \`
-          <div style="margin-bottom:5px;display:flex;align-items:center;gap:6px;">
-            <div style="width:10px;height:10px;border-radius:50%;background:#1f70c1;"></div>
-            US Cities (${TRAVEL_CITIES.filter(c=>c.type==="us").length})
-          </div>
-          <div style="display:flex;align-items:center;gap:6px;">
-            <div style="width:10px;height:10px;border-radius:50%;background:#e94560;"></div>
-            International (${TRAVEL_CITIES.filter(c=>c.type==="intl").length})
-          </div>
-        \`;
+        div.innerHTML =
+          "<div style=\"margin-bottom:5px;display:flex;align-items:center;gap:6px;\">" +
+          "<div style=\"width:10px;height:10px;border-radius:50%;background:#1f70c1;\"></div>" +
+          "US Cities (10)" +
+          "</div>" +
+          "<div style=\"display:flex;align-items:center;gap:6px;\">" +
+          "<div style=\"width:10px;height:10px;border-radius:50%;background:#e94560;\"></div>" +
+          "International (9)" +
+          "</div>";
         return div;
       };
       legend.addTo(map);
