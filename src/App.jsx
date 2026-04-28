@@ -1,14 +1,24 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
 // 25002500 Mobile detection hook 25002500250025002500250025002500250025002500250025002500250025002500250025002500250025002500250025002500250025002500250025002500250025002500250025002500250025002500250025002500
-const useMobile = () => {
-  const [mobile, setMobile] = useState(window.innerWidth < 768);
+const useDevice = () => {
+  const get = () => ({
+    mobile: window.innerWidth < 1024,
+    landscape: window.innerWidth > window.innerHeight,
+    pwa: window.matchMedia("(display-mode: standalone)").matches ||
+         window.navigator.standalone === true,
+  });
+  const [device, setDevice] = useState(get);
   useEffect(() => {
-    const handler = () => setMobile(window.innerWidth < 768);
+    const handler = () => setDevice(get());
     window.addEventListener("resize", handler);
-    return () => window.removeEventListener("resize", handler);
+    window.addEventListener("orientationchange", handler);
+    return () => {
+      window.removeEventListener("resize", handler);
+      window.removeEventListener("orientationchange", handler);
+    };
   }, []);
-  return mobile;
+  return device;
 };
 
 // ── Logo helper ──────────────────────────────────────────────────────────────
@@ -608,7 +618,8 @@ export default function CareerTimeline() {
   const [animating, setAnimating] = useState(false);
   const [direction, setDirection] = useState("forward");
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const mobile = useMobile();
+  const { mobile, landscape, pwa } = useDevice();
+  const isAirPlay = mobile && landscape; // landscape mobile = AirPlay / screen share
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
   const containerRef = useRef(null);
@@ -672,8 +683,8 @@ export default function CareerTimeline() {
   }, []);
 
   const slide = slides[current];
-  const pad = mobile ? "16px 18px" : "30px 60px";
-  const topPad = mobile ? "12px 18px" : "18px 40px";
+  const pad = isAirPlay ? "10px 40px" : mobile ? "16px 18px" : "30px 60px";
+  const topPad = isAirPlay ? "8px 40px" : mobile ? "12px 18px" : "18px 40px";
 
   return (
     <div
@@ -737,26 +748,27 @@ export default function CareerTimeline() {
               fontFamily: "monospace", fontWeight: "bold",
             }}>{current + 1} / {totalSlides}</span>
           )}
-          {/* Fullscreen toggle */}
-          <button
-            onClick={toggleFullscreen}
-            title={isFullscreen ? "Exit fullscreen (F)" : "Go fullscreen (F)"}
-            style={{
-              width: 34, height: 34, borderRadius: 8,
-              border: `1px solid ${slide.accent}55`,
-              background: `${slide.accent}18`,
-              color: "white", fontSize: 14, cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}
-          >
-            {isFullscreen ? "⛶" : "⛶"}
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ display: "block" }}>
-              {isFullscreen
-                ? <path d="M5 1H1v4M9 1h4v4M5 13H1V9M9 13h4V9" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-                : <path d="M1 5V1h4M9 1h4v4M13 9v4H9M5 13H1V9" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-              }
-            </svg>
-          </button>
+          {/* Fullscreen toggle — desktop only, PWA is already fullscreen */}
+          {!mobile && (
+            <button
+              onClick={toggleFullscreen}
+              title={isFullscreen ? "Exit fullscreen (F)" : "Go fullscreen (F)"}
+              style={{
+                width: 34, height: 34, borderRadius: 8,
+                border: `1px solid ${slide.accent}55`,
+                background: `${slide.accent}18`,
+                color: "white", fontSize: 14, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ display: "block" }}>
+                {isFullscreen
+                  ? <path d="M5 1H1v4M9 1h4v4M5 13H1V9M9 13h4V9" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+                  : <path d="M1 5V1h4M9 1h4v4M13 9v4H9M5 13H1V9" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+                }
+              </svg>
+            </button>
+          )}
         </div>
       </div>
 
@@ -979,8 +991,8 @@ export default function CareerTimeline() {
         </div>
       )}
 
-      {/* Mobile bottom nav bar */}
-      {mobile && (
+      {/* Mobile bottom nav bar — hide in AirPlay landscape since nav buttons show instead */}
+      {mobile && !isAirPlay && (
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
           padding: "10px 20px", borderTop: `1px solid ${slide.accent}22`,
@@ -1018,7 +1030,7 @@ export default function CareerTimeline() {
       )}
 
       {/* Desktop nav buttons */}
-      {!mobile && (
+      {(!mobile || isAirPlay) && (
         <div style={{ position: "fixed", bottom: 68, right: 34, display: "flex", gap: 11, zIndex: 10 }}>
           <button onClick={prev} disabled={current === 0} style={{
             width: 44, height: 44, borderRadius: "50%",
@@ -1037,14 +1049,14 @@ export default function CareerTimeline() {
         </div>
       )}
 
-      {current === 0 && !mobile && (
+      {current === 0 && (!mobile || isAirPlay) && (
         <div style={{
           position: "fixed", bottom: 16, left: "50%", transform: "translateX(-50%)",
           color: "rgba(255,255,255,0.3)", fontSize: 11, fontFamily: "monospace",
           letterSpacing: 1, zIndex: 10,
         }}>Press → or Space to advance • F for fullscreen</div>
       )}
-      {current === 0 && mobile && (
+      {current === 0 && mobile && !isAirPlay && (
         <div style={{
           position: "absolute", top: "50%", left: "50%",
           transform: "translate(-50%, 120px)",
