@@ -513,8 +513,8 @@ export default function CareerTimeline() {
             }}>{current + 1} / {totalSlides}</span>
           )}
 
-          {/* Fullscreen toggle */}
-          <button
+{/* Fullscreen toggle — desktop only */}
+          {!mobile && <button
             onClick={toggleFullscreen}
             title={isFullscreen ? "Exit fullscreen (F)" : "Go fullscreen (F)"}
             style={{
@@ -525,14 +525,13 @@ export default function CareerTimeline() {
               display: "flex", alignItems: "center", justifyContent: "center",
             }}
           >
-            {isFullscreen ? "⛶" : "⛶"}
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ display: "block" }}>
               {isFullscreen
                 ? <path d="M5 1H1v4M9 1h4v4M5 13H1V9M9 13h4V9" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
                 : <path d="M1 5V1h4M9 1h4v4M13 9v4H9M5 13H1V9" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
               }
             </svg>
-          </button>
+          </button>}
                         
           {/* Fullscreen toggle */}
 
