@@ -57,8 +57,8 @@ const Logo = ({ domain, alt, size = 40, style = {} }) => {
 
 // ── Travel map ────────────────────────────────────────────────────────────────
 const TRAVEL_CITIES = [
-  { name: "London",        lat: 51.5074,  lng: -0.1278,   type: "intl" },
-  { name: "Vevey",         lat: 46.4631,  lng:  6.8424,   type: "intl" },
+  { name: "London",        lat: 51.5074,  lng:  -0.1278,  type: "intl" },
+  { name: "Vevey",         lat: 46.4631,  lng:   6.8424,  type: "intl" },
   { name: "Tokyo",         lat: 35.6762,  lng: 139.6503,  type: "intl" },
   { name: "Hyderabad",     lat: 17.3850,  lng:  78.4867,  type: "intl" },
   { name: "Chennai",       lat: 13.0827,  lng:  80.2707,  type: "intl" },
@@ -66,26 +66,107 @@ const TRAVEL_CITIES = [
   { name: "Munich",        lat: 48.1351,  lng:  11.5820,  type: "intl" },
   { name: "Dublin",        lat: 53.3498,  lng:  -6.2603,  type: "intl" },
   { name: "Bordeaux",      lat: 44.8378,  lng:  -0.5792,  type: "intl" },
+  { name: "Krakow",        lat: 50.0647,  lng:  19.9450,  type: "intl" },
   { name: "New York",      lat: 40.7128,  lng: -74.0060,  type: "us"   },
   { name: "W. Palm Beach", lat: 26.7153,  lng: -80.0534,  type: "us"   },
   { name: "Orlando",       lat: 28.5383,  lng: -81.3792,  type: "us"   },
+  { name: "Atlanta",       lat: 33.7490,  lng: -84.3880,  type: "us"   },
   { name: "Dallas",        lat: 32.7767,  lng: -96.7970,  type: "us"   },
   { name: "St. Louis",     lat: 38.6270,  lng: -90.1994,  type: "us"   },
+  { name: "Springfield",   lat: 37.2090,  lng: -93.2923,  type: "us"   },
+  { name: "Oxford",        lat: 33.6143,  lng: -85.8347,  type: "us"   },
+  { name: "Newberry",      lat: 34.2779,  lng: -81.6179,  type: "us"   },
   { name: "Chicago",       lat: 41.8781,  lng: -87.6298,  type: "us"   },
+  { name: "Schaumburg",    lat: 42.0334,  lng: -88.0834,  type: "us"   },
+  { name: "Urbana",        lat: 40.1106,  lng: -88.2073,  type: "us"   },
   { name: "Pittsburgh",    lat: 40.4406,  lng: -79.9959,  type: "us"   },
   { name: "Philadelphia",  lat: 39.9526,  lng: -75.1652,  type: "us"   },
-  { name: "San Francisco", lat: 37.7749,  lng: -122.4194, type: "us"   },
-  { name: "Seattle",       lat: 47.6062,  lng: -122.3321, type: "us"   },
+  { name: "Tulare",        lat: 36.2077,  lng:-119.3473,  type: "us"   },
+  { name: "San Francisco", lat: 37.7749,  lng:-122.4194,  type: "us"   },
+  { name: "Issaquah",      lat: 47.5301,  lng:-122.0326,  type: "us"   },
+  { name: "Seattle",       lat: 47.6062,  lng:-122.3321,  type: "us"   },
 ];
 
+const US_COUNT = TRAVEL_CITIES.filter(c => c.type === "us").length;
+const INTL_COUNT = TRAVEL_CITIES.filter(c => c.type === "intl").length;
+
 const MapSlide = ({ accent }) => {
+  const wrapRef = useRef(null);
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
+  const [mapHeight, setMapHeight] = useState(320);
+
+  // Measure available height after render
+  useEffect(() => {
+    const measure = () => {
+      if (wrapRef.current) {
+        const h = wrapRef.current.getBoundingClientRect().height;
+        if (h > 50) setMapHeight(h);
+      }
+    };
+    measure();
+    const t = setTimeout(measure, 100);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
-    if (mapInstanceRef.current) return; // already initialized
+    if (!mapHeight) return;
 
-    // Load Leaflet CSS
+    const initMap = () => {
+      if (!mapRef.current || mapInstanceRef.current) return;
+      const L = window.L;
+
+      const map = L.map(mapRef.current, {
+        center: [28, 10],
+        zoom: 2,
+        zoomControl: true,
+        attributionControl: false,
+        scrollWheelZoom: true,
+        dragging: true,
+        doubleClickZoom: true,
+        touchZoom: true,
+      });
+
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+        subdomains: "abcd",
+        maxZoom: 19,
+      }).addTo(map);
+
+      TRAVEL_CITIES.forEach(city => {
+        const color = city.type === "intl" ? "#e94560" : "#1f70c1";
+        L.circleMarker([city.lat, city.lng], {
+          radius: 8,
+          fillColor: color,
+          color: "white",
+          weight: 1.5,
+          fillOpacity: 0.9,
+        }).addTo(map).bindTooltip(city.name, {
+          permanent: false,
+          direction: "top",
+          className: "city-tooltip",
+          offset: [0, -8],
+        });
+      });
+
+      const legend = L.control({ position: "bottomleft" });
+      legend.onAdd = () => {
+        const div = L.DomUtil.create("div");
+        div.style.cssText = "background:rgba(5,10,26,0.88);padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);font-family:monospace;font-size:12px;color:white;line-height:2;";
+        div.innerHTML =
+          "<div style=\"display:flex;align-items:center;gap:8px;\">" +
+          "<div style=\"width:11px;height:11px;border-radius:50%;background:#1f70c1;flex-shrink:0;\"></div>" +
+          "US Cities (" + US_COUNT + ")" +
+          "</div>" +
+          "<div style=\"display:flex;align-items:center;gap:8px;\">" +
+          "<div style=\"width:11px;height:11px;border-radius:50%;background:#e94560;flex-shrink:0;\"></div>" +
+          "International (" + INTL_COUNT + ")" +
+          "</div>";
+        return div;
+      };
+      legend.addTo(map);
+      mapInstanceRef.current = map;
+    };
+
     if (!document.getElementById("leaflet-css")) {
       const link = document.createElement("link");
       link.id = "leaflet-css";
@@ -94,77 +175,20 @@ const MapSlide = ({ accent }) => {
       document.head.appendChild(link);
     }
 
-    // Load Leaflet JS
-    const loadLeaflet = () => {
-      if (window.L) { initMap(); return; }
-      const script = document.createElement("script");
-      script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-      script.onload = initMap;
-      document.head.appendChild(script);
-    };
-
-    const initMap = () => {
-      if (!mapRef.current || mapInstanceRef.current) return;
-      const L = window.L;
-
-      const map = L.map(mapRef.current, {
-        center: [25, 15],
-        zoom: 2,
-        zoomControl: false,
-        attributionControl: false,
-        scrollWheelZoom: false,
-        dragging: false,
-        doubleClickZoom: false,
-        touchZoom: false,
-      });
-
-      // Dark tile layer
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-        subdomains: "abcd",
-        maxZoom: 19,
-      }).addTo(map);
-
-      // Plot cities
-      TRAVEL_CITIES.forEach(city => {
-        const color = city.type === "intl" ? "#e94560" : "#1f70c1";
-        const marker = L.circleMarker([city.lat, city.lng], {
-          radius: 7,
-          fillColor: color,
-          color: "white",
-          weight: 1.5,
-          fillOpacity: 0.9,
-        }).addTo(map);
-
-        marker.bindTooltip(city.name, {
-          permanent: false,
-          direction: "top",
-          className: "city-tooltip",
-          offset: [0, -8],
-        });
-      });
-
-      // Add legend
-      const legend = L.control({ position: "bottomleft" });
-      legend.onAdd = () => {
-        const div = L.DomUtil.create("div");
-        div.style.cssText = "background:rgba(5,10,26,0.85);padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);font-family:monospace;font-size:11px;color:white;";
-        div.innerHTML =
-          "<div style=\"margin-bottom:5px;display:flex;align-items:center;gap:6px;\">" +
-          "<div style=\"width:10px;height:10px;border-radius:50%;background:#1f70c1;\"></div>" +
-          "US Cities (10)" +
-          "</div>" +
-          "<div style=\"display:flex;align-items:center;gap:6px;\">" +
-          "<div style=\"width:10px;height:10px;border-radius:50%;background:#e94560;\"></div>" +
-          "International (9)" +
-          "</div>";
-        return div;
-      };
-      legend.addTo(map);
-
-      mapInstanceRef.current = map;
-    };
-
-    loadLeaflet();
+    if (window.L) {
+      initMap();
+    } else {
+      const existing = document.getElementById("leaflet-js");
+      if (!existing) {
+        const script = document.createElement("script");
+        script.id = "leaflet-js";
+        script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+        script.onload = initMap;
+        document.head.appendChild(script);
+      } else {
+        existing.addEventListener("load", initMap);
+      }
+    }
 
     return () => {
       if (mapInstanceRef.current) {
@@ -172,12 +196,12 @@ const MapSlide = ({ accent }) => {
         mapInstanceRef.current = null;
       }
     };
-  }, []);
+  }, [mapHeight]);
 
   return (
-    <div style={{ flex: 1, position: "relative", borderRadius: 12, overflow: "hidden", minHeight: 200 }}>
-      <style>{".city-tooltip { background: #050a1a; color: white; border: 1px solid rgba(255,255,255,0.2); font-family: monospace; font-size: 11px; padding: 3px 8px; border-radius: 4px; box-shadow: none; } .city-tooltip::before { display: none; }"}</style>
-      <div ref={mapRef} style={{ width: "100%", height: "100%", minHeight: 200 }} />
+    <div ref={wrapRef} style={{ flex: 1, position: "relative", borderRadius: 12, overflow: "hidden", minHeight: 260 }}>
+      <style>{".city-tooltip{background:#050a1a !important;color:white !important;border:1px solid rgba(255,255,255,0.25) !important;font-family:monospace !important;font-size:11px !important;padding:4px 10px !important;border-radius:5px !important;box-shadow:0 2px 8px rgba(0,0,0,0.5) !important;}.city-tooltip::before{display:none !important;}.leaflet-control-zoom a{background:#0a1628 !important;color:white !important;border-color:rgba(255,255,255,0.2) !important;}"}</style>
+      <div ref={mapRef} style={{ width: "100%", height: mapHeight, minHeight: 260 }} />
     </div>
   );
 };
@@ -187,15 +211,15 @@ const slides = [
   {
     id: 0,
     type: "intro",
-    year: "7th Grade",
-    label: "Right Where You Are",
+    year: "Plum Grove WOW Day",
+    label: "Welcome",
     icon: "🎒",
     color: "#1a1a2e",
     accent: "#e94560",
-    title: "My Journey Started\nRight Here",
-    body: "I sat in a classroom just like this one — wondering what I'd do with my life. Spoiler: it turned out better than I ever expected.",
+    title: "Welcome to\nWOW Day",
+    body: "Today I'll share an overview of the company I work for, what I actually do there every day, and how I got there — starting from right here in Michigan.",
     stat: null,
-    tag: "Rolling Meadows, IL",
+    tag: "Stevensville, MI",
     logo: null,
   },
   {
@@ -490,13 +514,13 @@ const slides = [
     color: "#0f3460",
     accent: "#00d4aa",
     logo: null,
-    title: "What I'd Tell\n7th-Grade Me",
+    title: "What I'd Tell\nMiddle School Me",
     body: null,
     bullets: [
-      "I learned that intelligence isn't fixed — it grows with effort and experience.",
-      "Have strong opinions, hold them loosely — stay curious and open to being wrong.",
-      "Things in life are relative, and through experiences comes wisdom.",
-      "The democratization of technology has created a world with more opportunity than ever before.",
+      "Intelligence isn't fixed — it grows with effort, curiosity, and experience.",
+      "Have strong opinions, hold them loosely.",
+      "Perception is relative.",
+      "Technology has been democratized — the opportunity in front of you is unlike any generation before.",
       "I've never regretted being nice.",
     ],
     stat: null,
@@ -725,6 +749,7 @@ export default function CareerTimeline() {
                 style={{ background: "transparent", padding: 0, borderRadius: 0 }} />
             </div>
           )}
+
         </div>
 
         {/* Body */}
