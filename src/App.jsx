@@ -512,6 +512,7 @@ export default function CareerTimeline() {
               fontFamily: "monospace", fontWeight: "bold",
             }}>{current + 1} / {totalSlides}</span>
           )}
+
           {/* Fullscreen toggle */}
           <button
             onClick={toggleFullscreen}
@@ -532,6 +533,9 @@ export default function CareerTimeline() {
               }
             </svg>
           </button>
+                        
+          {/* Fullscreen toggle */}
+
         </div>
       </div>
 
