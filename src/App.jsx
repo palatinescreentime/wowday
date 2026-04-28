@@ -54,6 +54,135 @@ const Logo = ({ domain, alt, size = 40, style = {} }) => {
   );
 };
 
+
+// ── Travel map ────────────────────────────────────────────────────────────────
+const TRAVEL_CITIES = [
+  { name: "London",        lat: 51.5074,  lng: -0.1278,   type: "intl" },
+  { name: "Vevey",         lat: 46.4631,  lng:  6.8424,   type: "intl" },
+  { name: "Tokyo",         lat: 35.6762,  lng: 139.6503,  type: "intl" },
+  { name: "Hyderabad",     lat: 17.3850,  lng:  78.4867,  type: "intl" },
+  { name: "Chennai",       lat: 13.0827,  lng:  80.2707,  type: "intl" },
+  { name: "Bangalore",     lat: 12.9716,  lng:  77.5946,  type: "intl" },
+  { name: "Munich",        lat: 48.1351,  lng:  11.5820,  type: "intl" },
+  { name: "Dublin",        lat: 53.3498,  lng:  -6.2603,  type: "intl" },
+  { name: "Bordeaux",      lat: 44.8378,  lng:  -0.5792,  type: "intl" },
+  { name: "New York",      lat: 40.7128,  lng: -74.0060,  type: "us"   },
+  { name: "W. Palm Beach", lat: 26.7153,  lng: -80.0534,  type: "us"   },
+  { name: "Orlando",       lat: 28.5383,  lng: -81.3792,  type: "us"   },
+  { name: "Dallas",        lat: 32.7767,  lng: -96.7970,  type: "us"   },
+  { name: "St. Louis",     lat: 38.6270,  lng: -90.1994,  type: "us"   },
+  { name: "Chicago",       lat: 41.8781,  lng: -87.6298,  type: "us"   },
+  { name: "Pittsburgh",    lat: 40.4406,  lng: -79.9959,  type: "us"   },
+  { name: "Philadelphia",  lat: 39.9526,  lng: -75.1652,  type: "us"   },
+  { name: "San Francisco", lat: 37.7749,  lng: -122.4194, type: "us"   },
+  { name: "Seattle",       lat: 47.6062,  lng: -122.3321, type: "us"   },
+];
+
+const MapSlide = ({ accent }) => {
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+
+  useEffect(() => {
+    if (mapInstanceRef.current) return; // already initialized
+
+    // Load Leaflet CSS
+    if (!document.getElementById("leaflet-css")) {
+      const link = document.createElement("link");
+      link.id = "leaflet-css";
+      link.rel = "stylesheet";
+      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      document.head.appendChild(link);
+    }
+
+    // Load Leaflet JS
+    const loadLeaflet = () => {
+      if (window.L) { initMap(); return; }
+      const script = document.createElement("script");
+      script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+      script.onload = initMap;
+      document.head.appendChild(script);
+    };
+
+    const initMap = () => {
+      if (!mapRef.current || mapInstanceRef.current) return;
+      const L = window.L;
+
+      const map = L.map(mapRef.current, {
+        center: [25, 15],
+        zoom: 2,
+        zoomControl: false,
+        attributionControl: false,
+        scrollWheelZoom: false,
+        dragging: false,
+        doubleClickZoom: false,
+        touchZoom: false,
+      });
+
+      // Dark tile layer
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+        subdomains: "abcd",
+        maxZoom: 19,
+      }).addTo(map);
+
+      // Plot cities
+      TRAVEL_CITIES.forEach(city => {
+        const color = city.type === "intl" ? "#e94560" : "#1f70c1";
+        const marker = L.circleMarker([city.lat, city.lng], {
+          radius: 7,
+          fillColor: color,
+          color: "white",
+          weight: 1.5,
+          fillOpacity: 0.9,
+        }).addTo(map);
+
+        marker.bindTooltip(city.name, {
+          permanent: false,
+          direction: "top",
+          className: "city-tooltip",
+          offset: [0, -8],
+        });
+      });
+
+      // Add legend
+      const legend = L.control({ position: "bottomleft" });
+      legend.onAdd = () => {
+        const div = L.DomUtil.create("div");
+        div.style.cssText = "background:rgba(5,10,26,0.85);padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);font-family:monospace;font-size:11px;color:white;";
+        div.innerHTML = \`
+          <div style="margin-bottom:5px;display:flex;align-items:center;gap:6px;">
+            <div style="width:10px;height:10px;border-radius:50%;background:#1f70c1;"></div>
+            US Cities (${TRAVEL_CITIES.filter(c=>c.type==="us").length})
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div style="width:10px;height:10px;border-radius:50%;background:#e94560;"></div>
+            International (${TRAVEL_CITIES.filter(c=>c.type==="intl").length})
+          </div>
+        \`;
+        return div;
+      };
+      legend.addTo(map);
+
+      mapInstanceRef.current = map;
+    };
+
+    loadLeaflet();
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []);
+
+  return (
+    <div style={{ flex: 1, position: "relative", borderRadius: 12, overflow: "hidden", minHeight: 200 }}>
+      <style>{".city-tooltip { background: #050a1a; color: white; border: 1px solid rgba(255,255,255,0.2); font-family: monospace; font-size: 11px; padding: 3px 8px; border-radius: 4px; box-shadow: none; } .city-tooltip::before { display: none; }"}</style>
+      <div ref={mapRef} style={{ width: "100%", height: "100%", minHeight: 200 }} />
+    </div>
+  );
+};
+
 // ── Slide data ───────────────────────────────────────────────────────────────
 const slides = [
   {
@@ -174,6 +303,21 @@ const slides = [
     ],
     stat: "✈️  I work at my clients' offices — which means I travel frequently",
     tag: "Healthcare • Life Sciences • Consumer Goods",
+  },
+  {
+    id: "ibm-travel",
+    type: "map",
+    year: "Work Travel",
+    label: "Where the Job Takes Me",
+    icon: "✈️",
+    color: "#050a1a",
+    accent: "#1f70c1",
+    logo: "ibm.com",
+    logoAlt: "IBM",
+    title: "Consulting Takes You\nAround the World",
+    body: "This is every city I've worked in as a consultant. When you solve problems for global companies, the office is wherever the client is.",
+    stat: null,
+    tag: null,
   },
   {
     id: "ibm-clients",
@@ -512,9 +656,8 @@ export default function CareerTimeline() {
               fontFamily: "monospace", fontWeight: "bold",
             }}>{current + 1} / {totalSlides}</span>
           )}
-
-{/* Fullscreen toggle — desktop only */}
-          {!mobile && <button
+          {/* Fullscreen toggle */}
+          <button
             onClick={toggleFullscreen}
             title={isFullscreen ? "Exit fullscreen (F)" : "Go fullscreen (F)"}
             style={{
@@ -525,16 +668,14 @@ export default function CareerTimeline() {
               display: "flex", alignItems: "center", justifyContent: "center",
             }}
           >
+            {isFullscreen ? "⛶" : "⛶"}
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ display: "block" }}>
               {isFullscreen
                 ? <path d="M5 1H1v4M9 1h4v4M5 13H1V9M9 13h4V9" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
                 : <path d="M1 5V1h4M9 1h4v4M13 9v4H9M5 13H1V9" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
               }
             </svg>
-          </button>}
-                        
-          {/* Fullscreen toggle */}
-
+          </button>
         </div>
       </div>
 
@@ -545,7 +686,7 @@ export default function CareerTimeline() {
         opacity: animating ? 0 : 1,
         transform: animating ? (direction === "forward" ? "translateX(30px)" : "translateX(-30px)") : "translateX(0)",
         transition: "opacity 0.3s ease, transform 0.3s ease",
-        overflowY: "auto",
+        overflowY: slide.type === "map" ? "hidden" : "auto",
       }}>
 
         {/* Badge */}
@@ -611,6 +752,11 @@ export default function CareerTimeline() {
               </div>
             ))}
           </div>
+        )}
+
+        {/* Travel map */}
+        {slide.type === "map" && (
+          <MapSlide accent={slide.accent} />
         )}
 
         {/* Client industries */}
