@@ -284,7 +284,7 @@ const slides = [
     icon: "🎒",
     color: "#1a1a2e",
     accent: "#e94560",
-    title: "Thank you",
+    title: "I'm John",
     body: "Today I'll share an overview of the company I work for, what I actually do there every day, and how I got there.",
     stat: null,
     tag: null,
@@ -819,9 +819,7 @@ export default function CareerTimeline() {
                 style={{ background: "transparent", padding: 0, borderRadius: 0 }} />
             </div>
           )}
-          {slide.type === "intro" && !mobile && (
-            <MichiganGraphic accent={slide.accent} />
-          )}
+
 
         </div>
 
